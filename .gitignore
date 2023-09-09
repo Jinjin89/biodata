@@ -1,2 +1,4 @@
 .Rproj.user
-R/sig_build.R
+.Rhistory
+.Rbuildignore
+sig_build.R
