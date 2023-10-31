@@ -20,7 +20,7 @@ fun_list2df_each <- function(input_list,colname){
 #' change a list into dataframe format
 #'
 #' @param input_list the list, each element is is_atomic format
-#' @param multiple_items_solver how to deal with items appear mulitple time, accept drop and kepp
+#' @param multiple_items_solver how to deal with items appear multiple time, accept drop and keep
 #' @param colname what the colname to show, default is pathway
 #'
 #' @return df
@@ -28,7 +28,8 @@ fun_list2df_each <- function(input_list,colname){
 #'
 #' @examples
 #' fun_list2df(sig_vec_list)
-fun_list2df <- function(input_list,multiple_items_solver="keep",colname = "pathway"){
+fun_list2df <- function(input_list,multiple_items_solver="keep",
+                        colname = "pathway"){
   if(fun_check_list_of_vector(input_list)){
     if(length(input_list) == 1){
       return(fun_list2df_each(input_list,colname = colname))
@@ -64,7 +65,7 @@ fun_list2df <- function(input_list,multiple_items_solver="keep",colname = "pathw
             for(each_cate in names(input_list)){
               if(each_item %in% input_list[[each_cate]]){
                 item_now = c(df[each_item,colname],each_cate)
-                item_now = na.omit(item_now)
+                item_now = stats::na.omit(item_now)
                 df[each_item,colname] = paste0(item_now,collapse = "&")
               }
             }
@@ -86,8 +87,9 @@ fun_list2df <- function(input_list,multiple_items_solver="keep",colname = "pathw
 #' @export
 #'
 #' @examples
-#'  tmp = fun_df2list("NF",db_hallmark)
-fun_df2list <- function(input_df,input_name_regex=NULL,name_col="term",value_col = "gene"){
+#'  tmp = fun_df2list(input_df=db_hallmark,input_name_regex = "NF")
+fun_df2list <- function(input_df,input_name_regex=NULL,name_col="term",
+                        value_col = "gene"){
   if(is.null(input_name_regex)){
     message("translate all data into df")
     db_filtered = input_df
@@ -108,9 +110,73 @@ fun_df2list <- function(input_df,input_name_regex=NULL,name_col="term",value_col
   }
 }
 
-if(F){
-  rm(list = ls())
-  load_all()
-  tmp = fun_df2list("NF",db_hallmark)
-}
 
+#' convert gene data into symbol
+#'
+#' @param input_genes input_genes
+#' @param from from type
+#' @param alias_not_found_keep_or_drop whether keep notfound data
+#'
+#' @return data.frame
+#' @export
+#'
+#' @examples
+#' fun_gene2symbol(c("ACTB","CT",'afdfs',"MT1"))
+fun_gene2symbol <- function(input_genes,from = "alias",
+                            # alias params
+                            alias_not_found_keep_or_drop = c("drop","keep")
+
+                            # entrez params
+
+                            # engs params
+                            ){
+  message("This script use `hgnc_complete_set_2023-10-01.txt`\n",
+          "which stores 43736 genes ",
+          "accept: alias,entrezid,ensg")
+  stopifnot("genes should be unique" = (length(input_genes) == length(unique(input_genes))))
+  from = match.arg(from,c("alias","entrezid","ensg"))
+
+  # 1) check alias
+  if(from == "alias"){
+    message("conert genes from alias into symbol")
+    # 0) params prepare
+    alias_not_found_keep_or_drop = match.arg(alias_not_found_keep_or_drop,c("drop","keep"))
+    gene_info_found = input_genes %>% dplyr::intersect(gene_alias2symbol$alias)
+    gene_info_lost = input_genes %>% dplyr::setdiff(gene_alias2symbol$alias)
+
+    res = data.frame(
+      row.names = input_genes,
+      alias = input_genes) %>%
+      mutate(symbol = NA_character_)
+    res[gene_info_found,"symbol"] = gene_alias2symbol[gene_info_found,"symbol"]
+    if(alias_not_found_keep_or_drop == "drop"){
+      res[gene_info_lost,"symbol"] = NA_character_
+    }else{
+      res[gene_info_lost,"symbol"] = gene_info_lost
+    }
+    message(
+      "Keep or drop for alias with symbol: ",alias_not_found_keep_or_drop,
+      "\nThe input genes list: ",length(input_genes),
+      "\nHow many alias not found in database: ",length(gene_info_lost),
+      "\nThe symbols found: ", length(unique(res$symbol)),
+      "\nof which, symbol with multiple map: ", sum(table(res$symbol)>1),
+      "\nand, symbol with single map: ", sum(table(res$symbol)==1)
+
+    )
+    res %>%
+      dplyr::mutate(alias_is_symbol = .$alias %in% gene_set$symbol) %>%
+      dplyr::arrange(dplyr::desc(alias_is_symbol)) %>%
+      return()
+
+  }else if(from == "entrezid"){
+    stop("TODO")
+
+  }else if(from == "ensg"){
+    stop("TODO")
+
+  }else{
+    stop("wrong input")
+  }
+  # 2)
+
+}

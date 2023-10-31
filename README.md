@@ -32,6 +32,22 @@ data are collected from
 2. kegg
 3. hallmark
 
+## genes info
+
+[hgnc gene data](https://ftp.ebi.ac.uk/pub/databases/genenames/hgnc/archive/monthly/tsv/hgnc_complete_set_2021-03-01.txt)
+
+gene info
+
+  * name (contains alias,symbol,previous symbol)
+  * symbol
+  * ensg
+  * entrez
+  * locus group: "protein-coding gene" "non-coding RNA"      "pseudogene"          "other" 
+  * location
+  
+
+
+
 ## signatures 
 
 * sig_df_list: storing data in data.frame/matrix-like format

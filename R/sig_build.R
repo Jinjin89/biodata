@@ -40,7 +40,6 @@ if(F){
 
 }
 
-
 if(F){
   # 1) get MHC
   mhc_string = c("B2M MHC-classical, class-I TAP1 MHC-classical, class-I TAP2 MHC-classical, class-I TAPBP MHC-classical, class-I HLA-A MHC-classical, class-I HLA-B MHC-classical, class-I HLA-C MHC-classical, class-I HLA-DPA1 MHC-classical, class-II HLA-DPB1 MHC-classical, class-II HLA-DQA1 MHC-classical, class-II HLA-DQA2 MHC-classical, class-II HLA-DQB1 MHC-classical, class-II HLA-DRA MHC-classical, class-II HLA-DRB1 MHC-classical, class-II HLA-E MHC-non-class, class-I HLA-F MHC-non-class, class-I HLA-G MHC-non-class, class-I HLA-DMA MHC-non-class, class-II HLA-DMB MHC-non-class, class-II HLA-DOA MHC-non-class, class-II HLA-DOB MHC-non-class, class-II")
@@ -81,8 +80,6 @@ if(F){
 }
 
 if(F){
-
-
   db_kegg_metabolism = readRDS("~/data/project/db/genes/kegg_metabolism.rds")
   use_data(db_kegg_metabolism)
 
@@ -102,11 +99,94 @@ if(F){
 
 }
 
-
 # tcga immune cellai
 
 if(F){
   tcga_immuneCellAI = readRDS("~/data/project/db/tcga/others/immuneCellAI.rds")
   use_data(tcga_immuneCellAI)
+}
+
+# tcga tip data
+
+if(F){
+  all_files <- list.files("~/data/tmp/download/",full.names = T)
+  purrr::map(all_files,\(each_file){
+    fread(each_file)%>%
+      as.data.frame() %>%
+      set_rownames(.[[1]]) %>%
+      select(-1) %>%
+      t %>%
+      as.data.frame() %>%
+      mutate(sample = str_sub(rownames(.),1,15)) %>%
+      filter(!duplicated(sample)) %>%
+      set_rownames(.$sample)
+  }) %>%
+    list_c() ->tcga_tip
+}
+
+# gene data
+
+if(F){
+  if(F){
+    # 1) get all the data into data.frame
+    df <- fread("~/data/tmp/hgnc_complete_set_2023-10-01.txt") %>%
+      mutate(alias = paste(symbol,alias_symbol,prev_symbol,sep = "|")) %>%
+      mutate(alias = str_remove(alias,"^\\|")) %>%
+      mutate(alias = str_remove(alias,"\\|$"))
+
+
+    # 2) get Genes column
+    gene_set <- tibble::tibble(symbol = df$symbol,
+                               hgnc_id = df$hgnc_id,
+                               name = df$name,
+                               entrez_id = df$entrez_id,
+                               ensembl = df$ensembl_gene_id,
+                               refseq = df$refseq_accession,
+                               alias = purrr::map(str_split(df$alias,"\\|"),\(x) unique(x) %>% setdiff("")),
+                               gene_family = df$gene_family,
+
+                               # meta data
+                               locus_type = df$locus_type,
+                               location = df$location
+    )
+    gene_set %<>%
+      as.data.frame() %>%
+      set_rownames(.$symbol)
+    use_data(gene_set,overwrite = T)
+
+    genes_used <- gene_set %>%
+      dplyr::select(symbol,alias) %>%
+      as.data.frame() %>%
+      set_rownames(.$symbol)
+
+    tictoc::tic()
+    alias2symbol <- purrr::map(genes_used$symbol,\(each_symbol){
+      current_alias <- genes_used[each_symbol,"alias"] %>% unlist()
+      data.frame(alias = current_alias) %>%
+        mutate(symbol = each_symbol)
+    }) %>%
+      purrr::list_rbind()
+    gene_alias2symbol = alias2symbol
+    tictoc::toc()
+
+    # save data
+    all_symbols = gene_alias2symbol$symbol %>% unique
+    symbol_test <-
+      gene_alias2symbol %>%
+      group_by(alias) %>%
+      summarise(symbol_new = paste0(symbol,collapse = "/")) %>%
+      ungroup() %>%
+      mutate(symbol_new = ifelse(alias %in% all_symbols,alias,symbol_new)) %>%
+      as.data.frame() %>%
+      set_rownames(.$alias) %>%
+      set_colnames(c("alias","symbol"))
+    all_symbols %>% setdiff(symbol_test %>% filter(alias %in% symbol) %>% pull(symbol))
+
+    gene_alias2symbol <- symbol_test
+    use_data(gene_alias2symbol,overwrite = T)
+
+  }
 
 }
+
+# pancancer Immune metagenes

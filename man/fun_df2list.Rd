@@ -27,5 +27,5 @@ list
 change the data.frame into list
 }
 \examples{
- tmp = fun_df2list("NF",db_hallmark)
+ tmp = fun_df2list(input_df=db_hallmark,input_name_regex = "NF")
 }
