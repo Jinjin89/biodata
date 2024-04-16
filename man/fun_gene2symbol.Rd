@@ -7,6 +7,7 @@
 fun_gene2symbol(
   input_genes,
   from = "alias",
+  gene_db_df = biodata::gene_alias2symbol,
   alias_not_found_keep_or_drop = c("drop", "keep")
 )
 }
@@ -14,6 +15,8 @@ fun_gene2symbol(
 \item{input_genes}{input_genes}
 
 \item{from}{from type}
+
+\item{gene_db_df}{the db used for gene mapping}
 
 \item{alias_not_found_keep_or_drop}{whether keep notfound data}
 }

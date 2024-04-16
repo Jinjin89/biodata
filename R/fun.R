@@ -115,6 +115,7 @@ fun_df2list <- function(input_df,input_name_regex=NULL,name_col="term",
 #'
 #' @param input_genes input_genes
 #' @param from from type
+#' @param gene_db_df the db used for gene mapping
 #' @param alias_not_found_keep_or_drop whether keep notfound data
 #'
 #' @return data.frame
@@ -123,12 +124,15 @@ fun_df2list <- function(input_df,input_name_regex=NULL,name_col="term",
 #' @examples
 #' fun_gene2symbol(c("ACTB","CT",'afdfs',"MT1"))
 fun_gene2symbol <- function(input_genes,from = "alias",
+                            # db params
+                            gene_db_df = biodata::gene_alias2symbol,
                             # alias params
                             alias_not_found_keep_or_drop = c("drop","keep")
 
                             # entrez params
 
                             # engs params
+
                             ){
   message("This script use `hgnc_complete_set_2023-10-01.txt`\n",
           "which stores 43736 genes ",
@@ -141,14 +145,14 @@ fun_gene2symbol <- function(input_genes,from = "alias",
     message("conert genes from alias into symbol")
     # 0) params prepare
     alias_not_found_keep_or_drop = match.arg(alias_not_found_keep_or_drop,c("drop","keep"))
-    gene_info_found = input_genes %>% dplyr::intersect(gene_alias2symbol$alias)
-    gene_info_lost = input_genes %>% dplyr::setdiff(gene_alias2symbol$alias)
+    gene_info_found = input_genes %>% dplyr::intersect(gene_db_df$alias)
+    gene_info_lost = input_genes %>% dplyr::setdiff(gene_db_df$alias)
 
     res = data.frame(
       row.names = input_genes,
       alias = input_genes) %>%
       mutate(symbol = NA_character_)
-    res[gene_info_found,"symbol"] = gene_alias2symbol[gene_info_found,"symbol"]
+    res[gene_info_found,"symbol"] = gene_db_df[gene_info_found,"symbol"]
     if(alias_not_found_keep_or_drop == "drop"){
       res[gene_info_lost,"symbol"] = NA_character_
     }else{

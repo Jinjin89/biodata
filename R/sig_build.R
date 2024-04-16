@@ -184,9 +184,27 @@ if(F){
 
     gene_alias2symbol <- symbol_test
     use_data(gene_alias2symbol,overwrite = T)
-
   }
-
 }
 
 # pancancer Immune metagenes
+
+# antiImmunePathway = fread("~/data/project/db/genes/anti_cancer_immune_path.csv")
+#
+# sig_list = sig_df_list
+#
+# sig_list$antiImmunePathway = purrr::map(seq_along(antiImmunePathway$Pathway),\(each_index){
+#   genes = antiImmunePathway$Genes[each_index]
+#   str_split(genes,",") %>% purrr::map(str_remove_all,pattern = " ") %>%
+#     unlist()
+# }) %>%
+#   set_names(antiImmunePathway$Pathway)
+#
+# use_data(sig_list)
+
+if(F){
+  tmp = readRDS("tmp.rds")
+  for(each_name in names(tmp)){
+    sig_list[[each_name]] = tmp[[each_name]]
+  }
+}
