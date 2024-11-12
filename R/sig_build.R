@@ -208,3 +208,169 @@ if(F){
     sig_list[[each_name]] = tmp[[each_name]]
   }
 }
+
+
+if(F){
+
+  kegg_update <- biodf::fun_read_df("/mnt/work/db/others/anno_meta.txt",1)
+  db_kegg_metabolism <- biodata::db_kegg_metabolism
+  db_kegg_metabolism %<>% mutate(pathway = kegg_update[.$term,"anno"])
+
+  rm(kegg_update)
+  rm(db_kegg_metabolism)
+
+  # update kegg term name
+  db_kegg %<>%
+    mutate(term = str_remove(term,"KEGG_") %>% str_replace_all("_",' ')) %>%
+    mutate(term = tolower(term)) %>%
+    mutate(term = fun_utils_capital(term))
+  db_kegg %<>% count(term,gene) %>% select(term,gene)
+  use_data(db_kegg,overwrite = T)
+}
+
+if(F){
+  reacotme_update <- biodf::fun_read_df("/mnt/work/db/others/anno_reactome_metabolism.txt",1)
+  db_reactome_metabolism <- biodata::db_reactome_metabolism
+  db_reactome_metabolism %<>% mutate(pathway = reacotme_update[.$term,"anno2_reactome"])
+  db_reactome_metabolism %>% count(pathway)
+  use_data(db_reactome_metabolism,overwrite = T)
+  rm(db_reactome_metabolism)
+  rm(reacotme_update)
+}
+
+if(F){
+  require(KEGGREST)
+  db_kegg_v2 <- keggLink("pathway", "hsa")
+  db_kegg_v2 <- data.frame(hsa_gene = names(db_kegg_v2),hsa_pathway = db_kegg_v2)
+  all_pathway_id <- db_kegg_v2$hsa_pathway %>% unique
+  pathway_convertor2 <- list()
+  i = 0
+  id10 = c()
+  for(each_id in all_pathway_id){
+    i = i +1
+    id10= c(id10,each_id)
+    if(i == 10 || each_id == 'path:hsa05418'){
+      print('id for :')
+      print(id10)
+      print('current_data: ')
+      print(len(pathway_convertor2))
+      pathway_convertor2[[len(pathway_convertor2) + 1]] <- keggGet(id10)
+      id10 = c()
+      i = 0
+    }
+  }
+
+  # test
+  path_list <- pathway_convertor2 %>%unlist(recursive = F)
+
+  # get the hsa
+  purrr::map(path_list,\(each_path){
+    entry <- each_path$ENTRY %>% unname
+   # name = each_path$NAME
+    class = each_path$CLASS
+  #  descript <- each_path$DESCRIPTION
+    pathway_name = each_path$PATHWAY_MAP %>% unname
+    #cat(entry,name,class,descript,pathway_name)
+    if(len(class) == 0){
+      class ='map;map'
+    }
+    data.frame(
+      row.names = entry,
+      pathway_name = pathway_name,
+    #  name = name,
+      class = class
+    )
+  }) %>%
+    purrr::reduce(rbind) %>%
+    mutate(class1 = str_extract(class,"^[^;]+"),
+           class2 = str_extract(class,"[^;]+$")) -> kegg_df
+
+  db_kegg_v2 %<>%
+    mutate(hsa = str_remove(hsa_pathway,"path:")) %>%
+    mutate(
+      term = kegg_df[.$hsa,"pathway_name"],
+      class1 = kegg_df[.$hsa,"class1"],
+      class2 = kegg_df[.$hsa,"class2"],
+      gene_id = str_extract(hsa_gene,'\\d+') %>% as.numeric()
+      ) %>%
+    mutate(gene = gene_set$symbol[match(.$gene_id,gene_set$entrez_id)])
+    db_kegg_v2 %<>%
+    count(term,gene,class1,class2) %>%
+    select(term,gene,class1,class2)
+
+  use_data(db_kegg_v2,overwrite = T)
+
+}
+
+if(F){
+  tmp <- msigdbr::msigdbr(category = 'C2')
+
+  db_reactome <- tmp %>%
+    filter(gs_subcat == 'CP:REACTOME') %>%
+    mutate(
+      term = gs_name,
+      gene = gene_symbol
+      ) %>%
+    select(term,gene) %>%
+    mutate(term = str_remove(term,"REACTOME_")) %>%
+    mutate(term = str_replace_all(term,"_",' ') %>% tolower()) %>%
+    mutate(term = fun_utils_capital(term)) %>%
+    count(term,gene) %>%
+    select(-n)
+
+  use_data(db_reactome)
+
+}
+
+if(F){
+  db_go %<>%
+    count(term,gene) %>%
+    select(term,gene) %>%
+    mutate(ontology = str_extract(term,"GO(BP|MF|CC)")) %>%
+    mutate(term = str_remove(term,"GO(BP|MF|CC)_") %>% str_replace_all("_",' ')) %>%
+    mutate(term = tolower(term)) %>%
+    mutate(term = fun_utils_capital(term))
+
+  use_data(db_go,overwrite = T)
+}
+
+
+if(F){
+  db_biocarta %<>%
+    count(term,gene) %>%
+    select(term,gene) %>%
+    mutate(term = str_remove(term,"BIOCARTA_") %>% str_replace_all("_",' ')) %>%
+    mutate(term = tolower(term)) %>%
+    mutate(term = fun_utils_capital(term))
+
+  use_data(db_biocarta,overwrite = T)
+
+}
+if(F){
+  db_hallmark %<>%
+    count(term,gene) %>%
+    select(term,gene) %>%
+    mutate(term = str_remove(term,"HALLMARK_") %>% str_replace_all("_",' ')) %>%
+    mutate(term = tolower(term)) %>%
+    mutate(term = fun_utils_capital(term))
+
+  use_data(db_hallmark,overwrite = T)
+
+}
+
+
+if(F){
+  ft_ch <- function(input_df){
+    n1 = nrow(input_df)
+    n2 = nrow(input_df %>% count(term,gene))
+    print(n1 == n2)
+  }
+  ft_ch(db_kegg)
+  ft_ch(db_kegg_v2)
+  ft_ch(db_kegg_metabolism)
+  ft_ch(db_hallmark)
+  ft_ch(db_biocarta)
+  ft_ch(db_go)
+  ft_ch(db_reactome)
+  ft_ch(db_reactome_metabolism)
+}
